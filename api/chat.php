@@ -28,6 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
+    /*
+     * Require authentication.
+     */
     $userId = Auth::userId();
 
     if ($userId === null) {
@@ -41,6 +44,9 @@ try {
         exit;
     }
 
+    /*
+     * Read JSON request.
+     */
     $rawInput = file_get_contents('php://input');
 
     $input = json_decode(
@@ -59,6 +65,9 @@ try {
         exit;
     }
 
+    /*
+     * CSRF protection.
+     */
     if (!CSRF::validate($input['csrf_token'] ?? null)) {
         http_response_code(403);
 
@@ -244,7 +253,7 @@ try {
     }
 
     /*
-     * Create models.
+     * Create application models.
      */
     $conversationModel = new Conversation($db);
     $messageModel = new Message($db);
@@ -283,6 +292,14 @@ try {
         'user',
         $message,
         null
+    );
+
+    /*
+     * Update conversation activity time.
+     */
+    $conversationModel->touch(
+        $conversationId,
+        $userId
     );
 
     /*
@@ -354,7 +371,15 @@ try {
     );
 
     /*
-     * Return response.
+     * Update conversation activity time again.
+     */
+    $conversationModel->touch(
+        $conversationId,
+        $userId
+    );
+
+    /*
+     * Return successful response.
      */
     echo json_encode([
         'success' => true,
@@ -367,6 +392,10 @@ try {
 
 } catch (Throwable $exception) {
 
+    /*
+     * Log detailed server-side error.
+     * Never expose internal details to the client.
+     */
     error_log($exception->getMessage());
 
     http_response_code(500);
