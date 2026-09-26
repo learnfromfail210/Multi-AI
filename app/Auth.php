@@ -6,9 +6,19 @@ final class Auth
 {
     public static function startSession(): void
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        if (session_status() !== PHP_SESSION_NONE) {
+            return;
         }
+
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+
+        session_start();
     }
 
     public static function login(int $userId): void
@@ -18,6 +28,7 @@ final class Auth
         session_regenerate_id(true);
 
         $_SESSION['user_id'] = $userId;
+        $_SESSION['authenticated_at'] = time();
     }
 
     public static function logout(): void
@@ -32,11 +43,14 @@ final class Auth
             setcookie(
                 session_name(),
                 '',
-                time() - 42000,
-                $params['path'],
-                $params['domain'],
-                $params['secure'],
-                $params['httponly']
+                [
+                    'expires' => time() - 42000,
+                    'path' => $params['path'],
+                    'domain' => $params['domain'],
+                    'secure' => $params['secure'],
+                    'httponly' => $params['httponly'],
+                    'samesite' => $params['samesite'] ?? 'Lax',
+                ]
             );
         }
 
