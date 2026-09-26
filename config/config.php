@@ -16,4 +16,11 @@ return [
         'password' => '',
         'charset' => 'utf8mb4',
     ],
+
+    'ai' => [
+        'openai' => [
+            'api_key' => '',
+            'base_url' => 'https://api.openai.com/v1',
+        ],
+    ],
 ];
