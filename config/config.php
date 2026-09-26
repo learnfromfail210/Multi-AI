@@ -6,21 +6,22 @@ return [
     'app' => [
         'name' => 'Multi-AI Terminal',
         'version' => '0.1.0',
-        'environment' => 'development',
+        'environment' => getenv('APP_ENV') ?: 'development',
     ],
 
     'database' => [
-        'host' => '',
-        'name' => '',
-        'username' => '',
-        'password' => '',
+        'host' => getenv('DB_HOST') ?: 'localhost',
+        'name' => getenv('DB_NAME') ?: '',
+        'username' => getenv('DB_USERNAME') ?: '',
+        'password' => getenv('DB_PASSWORD') ?: '',
         'charset' => 'utf8mb4',
     ],
 
     'ai' => [
         'openai' => [
-            'api_key' => '',
-            'base_url' => 'https://api.openai.com/v1',
+            'api_key' => getenv('OPENAI_API_KEY') ?: '',
+            'base_url' => getenv('OPENAI_BASE_URL')
+                ?: 'https://api.openai.com/v1',
         ],
     ],
 ];
