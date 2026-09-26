@@ -7,6 +7,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/Auth.php';
 require_once __DIR__ . '/../app/CSRF.php';
+require_once __DIR__ . '/../app/RateLimiter.php';
 require_once __DIR__ . '/../app/Conversation.php';
 require_once __DIR__ . '/../app/Message.php';
 require_once __DIR__ . '/../app/AI/AIProvider.php';
@@ -15,9 +16,6 @@ require_once __DIR__ . '/../app/AI/OpenAIProvider.php';
 
 Auth::startSession();
 
-/*
- * Only POST requests are allowed.
- */
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
 
@@ -30,9 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-    /*
-     * Require authentication.
-     */
     $userId = Auth::userId();
 
     if ($userId === null) {
@@ -46,9 +41,6 @@ try {
         exit;
     }
 
-    /*
-     * Read JSON request.
-     */
     $rawInput = file_get_contents('php://input');
 
     $input = json_decode(
@@ -67,15 +59,41 @@ try {
         exit;
     }
 
-    /*
-     * CSRF protection.
-     */
     if (!CSRF::validate($input['csrf_token'] ?? null)) {
         http_response_code(403);
 
         echo json_encode([
             'success' => false,
             'error' => 'Invalid CSRF token.'
+        ]);
+
+        exit;
+    }
+
+    /*
+     * Connect to database.
+     */
+    $db = Database::connect();
+
+    /*
+     * Rate limit chat requests.
+     *
+     * Maximum:
+     * 20 requests per user per 60 seconds.
+     */
+    $rateLimiter = new RateLimiter($db);
+
+    if (!$rateLimiter->check(
+        $userId,
+        'chat',
+        20,
+        60
+    )) {
+        http_response_code(429);
+
+        echo json_encode([
+            'success' => false,
+            'error' => 'Too many requests. Please try again later.'
         ]);
 
         exit;
@@ -137,9 +155,7 @@ try {
     );
 
     /*
-     * Validate provider.
-     *
-     * Only OpenAI is currently configured.
+     * Only currently configured provider.
      */
     if ($providerName !== 'openai') {
         http_response_code(422);
@@ -191,9 +207,6 @@ try {
         exit;
     }
 
-    /*
-     * Prevent excessively large requests.
-     */
     $messageLength = function_exists('mb_strlen')
         ? mb_strlen($message, 'UTF-8')
         : strlen($message);
@@ -214,9 +227,6 @@ try {
      */
     $config = require __DIR__ . '/../config/config.php';
 
-    /*
-     * Make sure the OpenAI API key exists.
-     */
     $openAIConfig = $config['ai']['openai'];
 
     if (
@@ -234,10 +244,8 @@ try {
     }
 
     /*
-     * Connect to database.
+     * Create models.
      */
-    $db = Database::connect();
-
     $conversationModel = new Conversation($db);
     $messageModel = new Message($db);
 
@@ -268,7 +276,7 @@ try {
     }
 
     /*
-     * Save the user's message.
+     * Save user message.
      */
     $messageModel->create(
         $conversationId,
@@ -285,10 +293,6 @@ try {
             $conversationId
         );
 
-    /*
-     * Convert database messages into
-     * the format expected by the AI provider.
-     */
     $aiMessages = [];
 
     foreach ($storedMessages as $storedMessage) {
@@ -315,7 +319,7 @@ try {
     );
 
     /*
-     * Send conversation to the AI provider.
+     * Send request to AI provider.
      */
     $aiResponse = $manager->chat(
         $providerName,
@@ -324,7 +328,7 @@ try {
     );
 
     /*
-     * Extract the assistant response.
+     * Extract assistant response.
      */
     $assistantMessage =
         $aiResponse['choices'][0]['message']['content']
@@ -340,7 +344,7 @@ try {
     }
 
     /*
-     * Save the AI response.
+     * Save assistant response.
      */
     $assistantMessageId = $messageModel->create(
         $conversationId,
@@ -350,7 +354,7 @@ try {
     );
 
     /*
-     * Return the result.
+     * Return response.
      */
     echo json_encode([
         'success' => true,
@@ -363,10 +367,6 @@ try {
 
 } catch (Throwable $exception) {
 
-    /*
-     * Log the detailed error on the server.
-     * Do not expose internal details to users.
-     */
     error_log($exception->getMessage());
 
     http_response_code(500);
