@@ -1,4 +1,4 @@
-****Multi-AI Terminal****
+********Multi-AI Terminal********
 
 A unified, secure, multi-platform AI workspace that connects multiple AI models through one interface.
 
@@ -52,7 +52,7 @@ A unified, secure, multi-platform AI workspace that connects multiple AI models 
 
 **🛠️ Technology**
 
-Backend
+*Backend*
 
 * PHP 8.4+
 * MySQL / MariaDB
@@ -60,19 +60,20 @@ Backend
 * REST-style API
 * Secure session management
 
-Web
+*Web*
 
 * HTML
 * CSS
 * JavaScript
 * PHP
+* Firebase
 
-Windows
+*Windows*
 
 * Windows desktop application
 * GitHub Actions automated builds
 
-Android
+*Android*
 
 * Android application
 * Backend API integration
