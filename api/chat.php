@@ -6,6 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/Auth.php';
+require_once __DIR__ . '/../app/CSRF.php';
 require_once __DIR__ . '/../app/Conversation.php';
 require_once __DIR__ . '/../app/Message.php';
 require_once __DIR__ . '/../app/AI/AIProvider.php';
@@ -13,6 +14,20 @@ require_once __DIR__ . '/../app/AI/AIManager.php';
 require_once __DIR__ . '/../app/AI/OpenAIProvider.php';
 
 Auth::startSession();
+
+/*
+ * Only POST requests are allowed.
+ */
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+
+    echo json_encode([
+        'success' => false,
+        'error' => 'Method not allowed.'
+    ]);
+
+    exit;
+}
 
 try {
     /*
@@ -34,8 +49,10 @@ try {
     /*
      * Read JSON request.
      */
+    $rawInput = file_get_contents('php://input');
+
     $input = json_decode(
-        file_get_contents('php://input'),
+        $rawInput,
         true
     );
 
@@ -51,12 +68,62 @@ try {
     }
 
     /*
-     * Read request values.
+     * CSRF protection.
      */
-    $conversationId = isset($input['conversation_id'])
-        ? (int) $input['conversation_id']
-        : null;
+    if (!CSRF::validate($input['csrf_token'] ?? null)) {
+        http_response_code(403);
 
+        echo json_encode([
+            'success' => false,
+            'error' => 'Invalid CSRF token.'
+        ]);
+
+        exit;
+    }
+
+    /*
+     * Read conversation ID.
+     */
+    $conversationId = null;
+
+    if (
+        array_key_exists('conversation_id', $input) &&
+        $input['conversation_id'] !== null &&
+        $input['conversation_id'] !== ''
+    ) {
+        if (
+            filter_var(
+                $input['conversation_id'],
+                FILTER_VALIDATE_INT
+            ) === false
+        ) {
+            http_response_code(422);
+
+            echo json_encode([
+                'success' => false,
+                'error' => 'Invalid conversation ID.'
+            ]);
+
+            exit;
+        }
+
+        $conversationId = (int) $input['conversation_id'];
+
+        if ($conversationId <= 0) {
+            http_response_code(422);
+
+            echo json_encode([
+                'success' => false,
+                'error' => 'Invalid conversation ID.'
+            ]);
+
+            exit;
+        }
+    }
+
+    /*
+     * Read provider, model and message.
+     */
     $providerName = trim(
         (string) ($input['provider'] ?? '')
     );
@@ -70,19 +137,24 @@ try {
     );
 
     /*
-     * Validate request.
+     * Validate provider.
+     *
+     * Only OpenAI is currently configured.
      */
-    if ($providerName === '') {
+    if ($providerName !== 'openai') {
         http_response_code(422);
 
         echo json_encode([
             'success' => false,
-            'error' => 'AI provider is required.'
+            'error' => 'Unsupported AI provider.'
         ]);
 
         exit;
     }
 
+    /*
+     * Validate model.
+     */
     if ($model === '') {
         http_response_code(422);
 
@@ -94,12 +166,68 @@ try {
         exit;
     }
 
+    if (strlen($model) > 100) {
+        http_response_code(422);
+
+        echo json_encode([
+            'success' => false,
+            'error' => 'AI model name is too long.'
+        ]);
+
+        exit;
+    }
+
+    /*
+     * Validate message.
+     */
     if ($message === '') {
         http_response_code(422);
 
         echo json_encode([
             'success' => false,
             'error' => 'Message cannot be empty.'
+        ]);
+
+        exit;
+    }
+
+    /*
+     * Prevent excessively large requests.
+     */
+    $messageLength = function_exists('mb_strlen')
+        ? mb_strlen($message, 'UTF-8')
+        : strlen($message);
+
+    if ($messageLength > 12000) {
+        http_response_code(413);
+
+        echo json_encode([
+            'success' => false,
+            'error' => 'Message is too long. Maximum length is 12000 characters.'
+        ]);
+
+        exit;
+    }
+
+    /*
+     * Load application configuration.
+     */
+    $config = require __DIR__ . '/../config/config.php';
+
+    /*
+     * Make sure the OpenAI API key exists.
+     */
+    $openAIConfig = $config['ai']['openai'];
+
+    if (
+        !isset($openAIConfig['api_key']) ||
+        trim((string) $openAIConfig['api_key']) === ''
+    ) {
+        http_response_code(503);
+
+        echo json_encode([
+            'success' => false,
+            'error' => 'AI provider is not configured.'
         ]);
 
         exit;
@@ -171,11 +299,6 @@ try {
     }
 
     /*
-     * Load application configuration.
-     */
-    $config = require __DIR__ . '/../config/config.php';
-
-    /*
      * Create AI manager.
      */
     $manager = new AIManager();
@@ -183,8 +306,6 @@ try {
     /*
      * Register OpenAI.
      */
-    $openAIConfig = $config['ai']['openai'];
-
     $manager->register(
         'openai',
         new OpenAIProvider(
