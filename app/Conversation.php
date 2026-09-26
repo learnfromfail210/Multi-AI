@@ -54,7 +54,7 @@ final class Conversation
             'SELECT id, title, created_at, updated_at
              FROM conversations
              WHERE user_id = :user_id
-             ORDER BY updated_at DESC'
+             ORDER BY updated_at DESC, id DESC'
         );
 
         $statement->execute([
@@ -77,6 +77,22 @@ final class Conversation
 
         return $statement->execute([
             'title' => $title,
+            'id' => $conversationId,
+            'user_id' => $userId,
+        ]);
+    }
+
+    public function touch(
+        int $conversationId,
+        int $userId
+    ): bool {
+        $statement = $this->db->prepare(
+            'UPDATE conversations
+             SET updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id AND user_id = :user_id'
+        );
+
+        return $statement->execute([
             'id' => $conversationId,
             'user_id' => $userId,
         ]);
