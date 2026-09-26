@@ -1,8 +1,8 @@
-**Multi-AI Terminal**
+#Multi-AI Terminal
 
 A unified, secure, multi-platform AI workspace that connects multiple AI models through one interface.
 
-🚀 Features
+*🚀 Features*
 
 * Multiple AI providers and models
 * Unified AI chat interface
@@ -16,7 +16,7 @@ A unified, secure, multi-platform AI workspace that connects multiple AI models 
 * Android application
 * Automated builds with GitHub Actions
 
-                    🏗️ Project Structure
+*🏗️ Project Structure*
                     
                     multi-ai-terminal/
                     ├── app/
@@ -32,7 +32,7 @@ A unified, secure, multi-platform AI workspace that connects multiple AI models 
                     ├── LICENSE
                     └── README.md
 
-🔌 Architecture
+*🔌 Architecture*
 
                  Multi-AI Terminal
                         │
@@ -50,7 +50,7 @@ A unified, secure, multi-platform AI workspace that connects multiple AI models 
           │             │             │
        Provider A    Provider B    Provider C
 
-🛠️ Technology
+*🛠️ Technology* 
 
 Backend
 
@@ -78,7 +78,7 @@ Android
 * Backend API integration
 * Automated release builds
 
-🔐 Security
+*🔐 Security*
 
 Security is a core part of Multi-AI Terminal.
 
@@ -98,7 +98,7 @@ The project is designed to include:
 
 ⚠️ Never commit API keys, passwords, database credentials, or other secrets to this repository.
 
-📦 Installation
+*📦 Installation*
 
 Clone the repository:
 
@@ -107,7 +107,7 @@ cd multi-ai-terminal
 
 Configure the database and environment before running the application.
 
-⚙️ Configuration
+*⚙️ Configuration*
 
 Sensitive configuration should be stored outside the repository.
 
@@ -121,7 +121,7 @@ AI_PROVIDER_KEY=
 
 Never commit real credentials.
 
-🗺️ Roadmap
+*🗺️ Roadmap*
 
 * [ ]	Project structure
 * [ ]	Database schema
@@ -140,7 +140,7 @@ Never commit real credentials.
 * [ ]	Automated Android builds
 * [ ]	Release system
 
-🤝 Contributing
+*🤝 Contributing*
 
 Contributions, suggestions, bug reports, and improvements are welcome.
 
