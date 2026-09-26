@@ -17,7 +17,12 @@ CREATE TABLE conversations (
     CONSTRAINT fk_conversations_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_conversations_user_updated (
+        user_id,
+        updated_at
+    )
 );
 
 CREATE TABLE messages (
@@ -31,7 +36,13 @@ CREATE TABLE messages (
     CONSTRAINT fk_messages_conversation
         FOREIGN KEY (conversation_id)
         REFERENCES conversations(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_messages_conversation_created (
+        conversation_id,
+        created_at,
+        id
+    )
 );
 
 CREATE TABLE ai_providers (
@@ -54,5 +65,32 @@ CREATE TABLE usage (
     CONSTRAINT fk_usage_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_usage_user_created (
+        user_id,
+        created_at
+    )
+);
+
+CREATE TABLE api_rate_limits (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    endpoint VARCHAR(100) NOT NULL,
+    request_count INT UNSIGNED NOT NULL DEFAULT 0,
+    window_started_at DATETIME NOT NULL,
+
+    CONSTRAINT fk_rate_limits_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+
+    UNIQUE KEY uq_rate_limit_user_endpoint (
+        user_id,
+        endpoint
+    ),
+
+    INDEX idx_rate_limits_window (
+        window_started_at
+    )
 );
