@@ -6,6 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/Auth.php';
+require_once __DIR__ . '/../app/CSRF.php';
 require_once __DIR__ . '/../app/User.php';
 
 Auth::startSession();
@@ -29,13 +30,32 @@ try {
 
     $action = $input['action'] ?? '';
 
+    /*
+     * The CSRF token is required for state-changing actions.
+     * The "me" action only reads session information.
+     */
+    if (in_array($action, ['register', 'login', 'logout'], true)) {
+        if (!CSRF::validate($input['csrf_token'] ?? null)) {
+            http_response_code(403);
+
+            echo json_encode([
+                'success' => false,
+                'error' => 'Invalid CSRF token.'
+            ]);
+
+            exit;
+        }
+    }
+
     $db = Database::connect();
     $user = new User($db);
 
     if ($action === 'register') {
         $email = trim((string) ($input['email'] ?? ''));
         $password = (string) ($input['password'] ?? '');
-        $displayName = trim((string) ($input['display_name'] ?? ''));
+        $displayName = trim(
+            (string) ($input['display_name'] ?? '')
+        );
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             http_response_code(422);
@@ -80,7 +100,8 @@ try {
 
         echo json_encode([
             'success' => true,
-            'user_id' => $userId
+            'user_id' => $userId,
+            'csrf_token' => CSRF::token()
         ]);
 
         exit;
@@ -117,7 +138,8 @@ try {
                 'id' => (int) $account['id'],
                 'email' => $account['email'],
                 'display_name' => $account['display_name']
-            ]
+            ],
+            'csrf_token' => CSRF::token()
         ]);
 
         exit;
@@ -139,7 +161,8 @@ try {
         echo json_encode([
             'success' => true,
             'authenticated' => $userId !== null,
-            'user_id' => $userId
+            'user_id' => $userId,
+            'csrf_token' => CSRF::token()
         ]);
 
         exit;
