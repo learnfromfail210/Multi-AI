@@ -1,4 +1,4 @@
-*Multi-AI Terminal*
+**Multi-AI Terminal**
 
 A unified, secure, multi-platform AI workspace that connects multiple AI models through one interface.
 
