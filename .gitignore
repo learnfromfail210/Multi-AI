@@ -1,0 +1,37 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# PHP dependencies
+/vendor/
+
+# Logs
+*.log
+
+# Uploads
+/uploads/*
+!/uploads/.gitkeep
+
+# Windows builds
+desktop/bin/
+desktop/obj/
+*.exe
+
+# Android builds
+android/.gradle/
+android/build/
+android/app/build/
+android/.idea/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
